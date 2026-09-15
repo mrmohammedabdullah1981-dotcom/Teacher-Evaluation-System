@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teacher Technical Performance Evaluation - Al Bayariq Private Schools</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Firebase SDK Standalone (v8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    :root {
+      --primary-green: #0a3d34;
+      --accent-gold: #c5a059;
+      --border-color: #0f172a;
+      --border-light: #cbd5e1;
+      --text-dark: #0f172a;
+    }
+
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background-color: #f1f5f9; margin: 0; padding: 4px; color: var(--text-dark); direction: ltr; }
+
+    /* Popups & Auth */
+    .login-overlay, .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .login-card, .modal-card {
+      background: #fff; border-radius: 10px; padding: 20px; width: 90%; max-width: 380px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; border-top: 5px solid var(--accent-gold);
+    }
+    .form-ctrl {
+      width: 100%; padding: 8px 12px; margin: 6px 0 12px 0;
+      border: 1px solid var(--border-light); border-radius: 5px; font-size: 13px; outline: none;
+    }
+    .btn-submit {
+      width: 100%; background: var(--primary-green); color: #fff; padding: 9px;
+      border: none; border-radius: 5px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+    }
+
+    /* Main Container */
+    .app-container {
+      max-width: 930px; margin: 0 auto; background: #ffffff; padding: 8px 16px 10px 16px;
+      border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid var(--border-light);
+      display: none;
+    }
+
+    /* Supervisor Bar */
+    .supervisor-bar {
+      background: #f8fafc; border: 1px solid var(--accent-gold); border-radius: 5px;
+      padding: 4px 10px; margin-bottom: 6px; display: flex; align-items: center;
+      justify-content: space-between; flex-wrap: wrap; gap: 6px;
+    }
+    .stage-btn {
+      background: #e2e8f0; border: none; padding: 3px 9px; border-radius: 4px;
+      font-weight: 700; cursor: pointer; font-size: 11px; color: var(--primary-green);
+    }
+    .stage-btn.active {
+      background: var(--primary-green); color: #fff;
+    }
+
+    /* Header */
+    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    .header-table td { border: none; vertical-align: middle; }
+
+    .school-logo-img {
+      max-height: 46px; max-width: 130px; object-fit: contain; cursor: pointer;
+    }
+
+    /* Title Banner & Visit Type */
+    .title-banner {
+      border: 1.5px solid var(--primary-green); border-radius: 5px;
+      padding: 2px 6px; margin-bottom: 4px; text-align: center; background: #fff;
+    }
+    .main-form-title {
+      font-size: 15px; font-weight: 800; color: var(--primary-green); margin: 0 0 1px 0; letter-spacing: 0.2px;
+    }
+    .visit-type-bar {
+      display: flex; justify-content: center; align-items: center; gap: 14px;
+      font-size: 10.5px; font-weight: 700; color: #334155; border-top: 1px dashed #cbd5e1; padding-top: 1px;
+    }
+    .visit-type-bar label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
+
+    /* Teacher Meta Data Table */
+    .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    .meta-table td {
+      border: 1.2px solid var(--border-color); padding: 1.5px 5px; text-align: left; font-size: 10px;
+    }
+    .meta-table .meta-label {
+      background-color: #f8fafc; font-weight: 700; width: 14%; color: var(--text-dark);
+    }
+    .meta-table .meta-value { width: 36%; padding: 1px; }
+    .meta-input {
+      width: 100%; border: none; padding: 1px 4px; font-size: 10.5px; outline: none; background: transparent; font-weight: 600;
+    }
+
+    /* Evaluation Table */
+    .eval-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    .eval-table th, .eval-table td {
+      border: 1.2px solid var(--border-color); padding: 1px 3px; text-align: center; font-size: 9.3px; line-height: 1.15;
+    }
+    .eval-table th { background-color: #f1f5f9; font-weight: 800; color: var(--text-dark); }
+    .eval-table td.indicator-cell { text-align: left; padding-left: 5px; font-weight: 500; }
+    .eval-table td.domain-cell { font-weight: 800; background-color: #fcfcfc; color: var(--primary-green); font-size: 9.2px; }
+
+    .score-input {
+      width: 100%; border: 1px solid transparent; border-radius: 2px; padding: 0.5px;
+      text-align: center; font-weight: 700; font-size: 10.5px; background: transparent; outline: none;
+    }
+    .score-input:focus { border-color: var(--accent-gold); background: #fefce8; }
+    .total-row { background-color: #f8fafc; font-weight: 800; font-size: 10.5px; }
+
+    /* Short Quiz Bar */
+    .quiz-bar {
+      border: 1.2px solid var(--border-color); border-top: none;
+      padding: 2.5px 8px; margin-top: -4px; margin-bottom: 4px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+      font-size: 10.5px; font-weight: 800; background: #fff;
+    }
+    .radio-group { display: inline-flex; align-items: center; gap: 10px; }
+    .radio-label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; font-weight: 700; }
+
+    /* Qualitative Notes */
+    .notes-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    .notes-table td { border: 1.2px solid var(--border-color); padding: 2px 5px; vertical-align: top; }
+    .notes-header-row {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 1px;
+    }
+    .notes-header { font-weight: 800; font-size: 10px; color: var(--text-dark); }
+    .quick-select {
+      font-size: 9px; padding: 1px 3px; border-radius: 3px; border: 1px solid var(--accent-gold);
+      background-color: #fffdf5; color: var(--primary-green); font-weight: 600; outline: none; cursor: pointer;
+      max-width: 270px;
+    }
+    .notes-textarea {
+      width: 100%; border: none; outline: none; resize: none; font-size: 9.8px;
+      line-height: 1.25; background: transparent; height: 26px;
+    }
+
+    /* Signatures Table */
+    .signature-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; }
+    .signature-table td {
+      border: 1.2px solid var(--border-color); padding: 3px 5px; text-align: center; vertical-align: middle;
+      font-size: 10px;
+    }
+    .sig-th { font-weight: 800; background-color: #f8fafc; color: var(--primary-green); padding: 2px 5px; font-size: 10.5px; }
+
+    /* Vision Footer */
+    .vision-footer { display: flex; justify-content: flex-start; align-items: center; margin-top: 1px; }
+    .vision-box {
+      border: 1.2px solid var(--border-color); padding: 1.5px 10px; font-size: 9.5px;
+      font-weight: 800; border-radius: 3px; background: #fcfcfc;
+    }
+
+    /* Bottom Action Bar */
+    .action-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--border-light);
+      flex-wrap: wrap; gap: 5px;
+    }
+    .btn { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; border: none; }
+    .btn-save { background-color: var(--primary-green); color: #fff; }
+    .btn-print { background-color: var(--accent-gold); color: #fff; }
+    .btn-reset { background-color: #ef4444; color: #fff; }
+    .btn-logout { background-color: #64748b; color: #fff; }
+    .btn-pin { background-color: #0284c7; color: #fff; }
+
+    .badge-grade { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 9.5px; font-weight: 700; }
+    .badge-excellent { background: #dcfce7; color: #15803d; }
+    .badge-vgood { background: #e0f2fe; color: #0369a1; }
+    .badge-good { background: #fef9c3; color: #a16207; }
+    .badge-need-imp { background: #fee2e2; color: #b91c1c; }
+
+    /* Exact 1-Page A4 Configuration */
+    @page {
+      size: A4 portrait;
+      margin: 3mm 5mm;
+    }
+    @media print {
+      body { background: #fff; padding: 0; margin: 0; }
+      .app-container {
+        box-shadow: none; border: none; padding: 0; width: 100% !important; max-width: 100% !important; display: block !important;
+      }
+      .no-print, .action-bar, .supervisor-bar, .login-overlay, .modal-overlay, .quick-select { display: none !important; }
+      .meta-table td, .eval-table th, .eval-table td, .notes-table td, .signature-table td, .quiz-bar, .title-banner, .vision-box {
+        border-color: #000 !important;
+      }
+      .score-input, input, textarea { border: none !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login Modal -->
+  <div id="loginScreen" class="login-overlay">
+    <div class="login-card">
+      <div style="font-size: 12px; color: var(--accent-gold); font-weight: 700;">AL BAYARIQ PRIVATE SCHOOLS</div>
+      <h3 style="font-size: 16px; color: var(--primary-green); margin: 4px 0 10px 0;">Teacher Evaluation System</h3>
+      
+      <div style="text-align: left;">
+        <label style="font-size: 11.5px; font-weight: 700; color: var(--primary-green);">Select Section / Role:</label>
+        <select id="userRole" class="form-ctrl">
+          <option value="primary">Elementary School</option>
+          <option value="middle">Middle School</option>
+          <option value="secondary">High School</option>
+          <option value="special">Special Education</option>
+          <option value="supervisor">Educational Supervisor</option>
+        </select>
+
+        <label style="font-size: 11.5px; font-weight: 700; color: var(--primary-green);">Security PIN Code:</label>
+        <input type="password" id="userPin" class="form-ctrl" placeholder="Enter PIN code" />
+      </div>
+
+      <button class="btn-submit" onclick="handleLogin()">Sign In</button>
+      <div id="loginError" style="color: #dc2626; font-size: 11.5px; margin-top: 6px; display: none;">Invalid PIN code!</div>
+    </div>
+  </div>
+
+  <!-- Change PIN Modal -->
+  <div id="changePinModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <h3 style="color: var(--primary-green); margin: 0 0 10px 0; font-size: 15px;">Change Security PIN</h3>
+      <div style="text-align: left;">
+        <label style="font-size: 11.5px; font-weight: 700;">Current PIN:</label>
+        <input type="password" id="currentPinInput" class="form-ctrl" placeholder="Old PIN" />
+        <label style="font-size: 11.5px; font-weight: 700;">New PIN:</label>
+        <input type="password" id="newPinInput" class="form-ctrl" placeholder="At least 4 digits" />
+        <label style="font-size: 11.5px; font-weight: 700;">Confirm New PIN:</label>
+        <input type="password" id="confirmNewPinInput" class="form-ctrl" placeholder="Re-enter new PIN" />
+      </div>
+      <div id="pinChangeMsg" style="font-size: 11px; margin-bottom: 6px; display: none;"></div>
+      <div style="display: flex; gap: 6px;">
+        <button class="btn-submit" onclick="submitChangePin()">Save PIN</button>
+        <button class="btn btn-logout" style="width: auto;" onclick="closeChangePinModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Form -->
+  <div id="mainApp" class="app-container">
+
+    <!-- Supervisor Navigation Bar -->
+    <div id="supervisorNav" class="supervisor-bar no-print" style="display: none;">
+      <div style="font-weight: 700; font-size: 11.5px; color: var(--primary-green);">Supervisor Control Panel:</div>
+      <div style="display: flex; gap: 6px;">
+        <button class="stage-btn" onclick="switchStageForSupervisor('primary')">Elementary</button>
+        <button class="stage-btn" onclick="switchStageForSupervisor('middle')">Middle</button>
+        <button class="stage-btn" onclick="switchStageForSupervisor('secondary')">High School</button>
+        <button class="stage-btn" onclick="switchStageForSupervisor('special')">Special Ed</button>
+      </div>
+    </div>
+
+    <!-- Official Header with School Logo (Teacher Photo removed) -->
+    <table class="header-table">
+      <tr>
+        <td style="width: 50%; text-align: left;">
+          <input type="file" id="logoUploader" accept="image/*" style="display: none;" onchange="uploadCustomLogo(event)" />
+          <img id="schoolLogo" src="logo.png" alt="School Logo" class="school-logo-img" onclick="document.getElementById('logoUploader').click()" title="Click to upload/change logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'120\' height=\'44\' viewBox=\'0 0 120 44\'><rect width=\'120\' height=\'44\' rx=\'5\' fill=\'%23f8fafc\' stroke=\'%23c5a059\' stroke-width=\'1\'/><text x=\'50%25\' y=\'52%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%230a3d34\' font-size=\'11\' font-family=\'sans-serif\' font-weight=\'bold\'>BAYARIQ LOGO</text></svg>';" />
+        </td>
+        <td style="width: 50%; text-align: right;">
+          <div style="font-weight: 800; font-size: 13.5px; color: var(--primary-green);">Al Bayariq Private Schools</div>
+          <div style="font-weight: 700; font-size: 11px; color: #475569;">Educational Supervision Administration</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Main Title Banner & Visit Type -->
+    <div class="title-banner">
+      <div class="main-form-title">Teacher Technical Performance Evaluation Form</div>
+      <div class="visit-type-bar">
+        <span style="color: var(--primary-green);">Visit Type:</span>
+        <label><input type="radio" name="visitType" value="Exploratory" /> Exploratory ◯</label>
+        <label><input type="radio" name="visitType" value="Diagnostic" /> Diagnostic ◯</label>
+        <label><input type="radio" name="visitType" value="Evaluative" checked /> Supervisory / Evaluative ◯</label>
+        <label><input type="radio" name="visitType" value="Peer Observation" /> Peer Observation ◯</label>
+      </div>
+    </div>
+
+    <!-- Teacher & Lesson Meta Data Table -->
+    <table class="meta-table">
+      <tr>
+        <td class="meta-label">Teacher Name</td>
+        <td class="meta-value"><input type="text" id="teacherName" class="meta-input" placeholder="Full name" oninput="updateSignTeacherName()" /></td>
+        <td class="meta-label">Department</td>
+        <td class="meta-value"><input type="text" id="schoolDept" class="meta-input" placeholder="e.g., English Language" /></td>
+      </tr>
+      <tr>
+        <td class="meta-label">Subject</td>
+        <td class="meta-value"><input type="text" id="subjectName" class="meta-input" placeholder="Subject" /></td>
+        <td class="meta-label">Lesson Topic</td>
+        <td class="meta-value"><input type="text" id="lessonTopic" class="meta-input" placeholder="Topic title" /></td>
+      </tr>
+      <tr>
+        <td class="meta-label">Day & Date</td>
+        <td class="meta-value"><input type="text" id="evalDate" class="meta-input" placeholder="e.g., Sunday 2026/09/13" /></td>
+        <td class="meta-label">Period</td>
+        <td class="meta-value"><input type="text" id="classPeriod" class="meta-input" placeholder="e.g., 6th Period" /></td>
+      </tr>
+      <tr>
+        <td class="meta-label">Grade / Class</td>
+        <td class="meta-value"><input type="text" id="classGrade" class="meta-input" placeholder="e.g., Grade 4 / B1" /></td>
+        <td class="meta-label">Students Present</td>
+        <td class="meta-value"><input type="number" id="presentCount" class="meta-input" placeholder="Attendance" /></td>
+      </tr>
+    </table>
+
+    <!-- Evaluation Criteria Table (Exactly 28 Items, Max: 100 Points) -->
+    <table class="eval-table">
+      <thead>
+        <tr>
+          <th style="width: 17%;">Domain</th>
+          <th style="width: 3%;">#</th>
+          <th style="width: 66%;">Performance Indicator</th>
+          <th style="width: 7%;">Max</th>
+          <th style="width: 7%;">Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Instructional Planning (10 Points) -->
+        <tr>
+          <td rowspan="3" class="domain-cell">Instructional<br>Planning<br><span style="font-size:8px;color:#64748b;">(10 Pts)</span></td>
+          <td>1</td>
+          <td class="indicator-cell">Lesson preparation aligns with the semester syllabus plan</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_0" oninput="validateAndRecalc(0, 3)" /></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td class="indicator-cell">Fulfills all elements of daily lesson preparation</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_1" oninput="validateAndRecalc(1, 3)" /></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td class="indicator-cell">Mental readiness during teaching aligns with the written plan</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_2" oninput="validateAndRecalc(2, 4)" /></td>
+        </tr>
+
+        <!-- Lesson Launch Quality (10 Points) -->
+        <tr>
+          <td rowspan="3" class="domain-cell">Lesson Launch<br>Quality<br><span style="font-size:8px;color:#64748b;">(10 Pts)</span></td>
+          <td>1</td>
+          <td class="indicator-cell">Preparing and organizing the classroom environment for learning</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_3" oninput="validateAndRecalc(3, 3)" /></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td class="indicator-cell">Stimulating students' attention in readiness for new learning</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_4" oninput="validateAndRecalc(4, 3)" /></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td class="indicator-cell">Learning warm-up: (Prior learning, hook, diagnostic assessment, clear objectives)</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_5" oninput="validateAndRecalc(5, 4)" /></td>
+        </tr>
+
+        <!-- Media & Activities (15 Points) -->
+        <tr>
+          <td rowspan="4" class="domain-cell">Media &<br>Activities<br><span style="font-size:8px;color:#64748b;">(15 Pts)</span></td>
+          <td>1</td>
+          <td class="indicator-cell">Diversifies presentation media (PPT, video, images, interactive links, role-play, etc.)</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_6" oninput="validateAndRecalc(6, 4)" /></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td class="indicator-cell">Instructional media is suitable for achieving learning outcomes</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_7" oninput="validateAndRecalc(7, 4)" /></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td class="indicator-cell">Designs learning activities matching varied learning styles and student groups (including SEN)</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_8" oninput="validateAndRecalc(8, 4)" /></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td class="indicator-cell">Employs technology and Artificial Intelligence (AI) in student learning</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_9" oninput="validateAndRecalc(9, 3)" /></td>
+        </tr>
+
+        <!-- English Language Proficiency & Instruction (15 Points) -->
+        <tr style="background-color: #fafdfb;">
+          <td rowspan="4" class="domain-cell" style="color: #047857;">English Proficiency<br>& Instruction<br><span style="font-size:8px;color:#047857;">(15 Pts)</span></td>
+          <td>1</td>
+          <td class="indicator-cell" style="font-weight:600;">Target Language Maximization: Uses English as primary medium and minimizes L1</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_10" oninput="validateAndRecalc(10, 4)" /></td>
+        </tr>
+        <tr style="background-color: #fafdfb;">
+          <td>2</td>
+          <td class="indicator-cell" style="font-weight:600;">Fluency & Pronunciation: Demonstrates natural fluency, clear accent, and intonation</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_11" oninput="validateAndRecalc(11, 4)" /></td>
+        </tr>
+        <tr style="background-color: #fafdfb;">
+          <td>3</td>
+          <td class="indicator-cell" style="font-weight:600;">Accuracy & Adaptation: Accurate grammar; adapts speaking pace to student level</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_12" oninput="validateAndRecalc(12, 3)" /></td>
+        </tr>
+        <tr style="background-color: #fafdfb;">
+          <td>4</td>
+          <td class="indicator-cell" style="font-weight:600;">Student Comprehension: Students understand easily and actively produce English</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_13" oninput="validateAndRecalc(13, 4)" /></td>
+        </tr>
+
+        <!-- Teaching & Learning (50 Points) -->
+        <tr>
+          <td rowspan="14" class="domain-cell">Teaching &<br>Learning<br><span style="font-size:8px;color:#64748b;">(50 Pts)</span></td>
+          <td>1</td>
+          <td class="indicator-cell">Provides a supportive, high-expectation learning environment</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_14" oninput="validateAndRecalc(14, 4)" /></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td class="indicator-cell">Actively utilizes textbooks / notebooks in student learning and assessment</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_15" oninput="validateAndRecalc(15, 3)" /></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td class="indicator-cell">Regularly corrects written work per guidelines, with dated signature</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_16" oninput="validateAndRecalc(16, 4)" /></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td class="indicator-cell">Diversifies homework based on subject nature (theory, practical, skills, projects, etc.)</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_17" oninput="validateAndRecalc(17, 3)" /></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td class="indicator-cell">Diversifies instructional strategies matching learning styles and situations</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_18" oninput="validateAndRecalc(18, 4)" /></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td class="indicator-cell">Procedural learning tasks fostering Higher-Order Thinking Skills (HOTS) and differentiation</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_19" oninput="validateAndRecalc(19, 4)" /></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td class="indicator-cell">Effectively utilizes and diversifies positive reinforcement</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_20" oninput="validateAndRecalc(20, 3)" /></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td class="indicator-cell">Employs classroom questions purposefully, addressing diverse student groups</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_21" oninput="validateAndRecalc(21, 4)" /></td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td class="indicator-cell">Varied formative assessment addressing differentiation and tracking continuous progress</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_22" oninput="validateAndRecalc(22, 4)" /></td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td class="indicator-cell">Develops and enhances students' self-assessment abilities</td>
+          <td>2</td>
+          <td><input type="number" min="0" max="2" class="score-input" id="sc_23" oninput="validateAndRecalc(23, 2)" /></td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td class="indicator-cell">Connects learning content to the grade-level target competencies and skills</td>
+          <td>3</td>
+          <td><input type="number" min="0" max="3" class="score-input" id="sc_24" oninput="validateAndRecalc(24, 3)" /></td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td class="indicator-cell">Teacher and students utilize instructional period purposefully</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_25" oninput="validateAndRecalc(25, 4)" /></td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td class="indicator-cell">Implements precise and varied summative evaluation addressing differentiation</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_26" oninput="validateAndRecalc(26, 4)" /></td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td class="indicator-cell">Closes the learning situation effectively, connecting knowledge to real life</td>
+          <td>4</td>
+          <td><input type="number" min="0" max="4" class="score-input" id="sc_27" oninput="validateAndRecalc(27, 4)" /></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="3" style="text-align: right; padding-right: 15px;">Earned Score (out of 100) / الدرجة المستحقة من ١٠٠</td>
+          <td>100</td>
+          <td id="totalScoreDisplay" style="color: var(--primary-green); font-size: 11.5px; font-weight: 800;">0</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- Short Quiz Bar Matching Exact Image Layout -->
+    <div class="quiz-bar">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span>Short Quiz / اختبار قصير:</span>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="quizType" value="Written" checked /> Written (تحريري) ◯</label>
+          <label class="radio-label"><input type="radio" name="quizType" value="Oral" /> Oral (شفوي) ◯</label>
+          <label class="radio-label"><input type="radio" name="quizType" value="Practical" /> Practical (عملي) ◯</label>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span>Class Average / متوسط درجات الفصل:</span>
+        <input type="number" id="quizAverage" step="0.5" min="0" max="10" placeholder="8" style="width: 44px; text-align: center; border: 1px solid var(--border-light); border-radius: 3px; padding: 1px; font-weight: 800; font-size: 10.5px;" />
+        <span>/ 10</span>
+      </div>
+      <div class="no-print">
+        <span id="evaluationStatusBadge" class="badge-grade badge-need-imp">Total: 0</span>
+      </div>
+    </div>
+
+    <!-- Qualitative Feedback Notes with Quick Select -->
+    <table class="notes-table">
+      <tr>
+        <td>
+          <div class="notes-header-row">
+            <div class="notes-header">Technical Strengths / إيجابيات الأداء الفني:</div>
+            <select class="quick-select no-print" onchange="insertOption('positivePoints', this)">
+              <option value="">-- Quick Select (Strengths) --</option>
+              <option value="Skillfully connects lesson concepts to real-world context and the local environment.">🌍 Connecting lesson to real-world context & environment</option>
+              <option value="Consistent use of English as the medium of instruction with minimal L1 reliance.">🗣️ Fluent English immersion & minimal Arabic reliance</option>
+              <option value="Proactive classroom management and effective handling of kinesthetic and hyperactive learners.">⭐ Proactive management & handling active learners</option>
+              <option value="Exemplary individual support and targeted adaptation for SEN / inclusion students.">♿ Targeted adaptation & support for SEN/inclusion students</option>
+              <option value="Mastery of subject matter and accurate content delivery.">1. Mastery of subject matter & content delivery</option>
+              <option value="Excellent classroom management and optimal time utilization.">2. Excellent classroom management & time utilization</option>
+              <option value="Effective integration of educational technology and AI tools.">3. Effective integration of EdTech & AI tools</option>
+              <option value="Engaging warm-up strategies that effectively activate prior knowledge.">4. Engaging warm-up activating prior knowledge</option>
+              <option value="High student engagement with diversified, student-centered activities.">5. High student engagement & student-centered tasks</option>
+              <option value="Skillful questioning techniques promoting Higher-Order Thinking Skills (HOTS).">6. Skillful questioning promoting HOTS</option>
+              <option value="Consistent implementation of ongoing formative assessment.">7. Consistent formative assessment & tracking</option>
+              <option value="Positive reinforcement fostering a supportive and motivating environment.">8. Positive reinforcement fostering motivation</option>
+              <option value="Clear instructional differentiation addressing varied learning needs.">9. Clear differentiation addressing learning needs</option>
+              <option value="Structured lesson closure effectively linking concepts to real-world applications.">10. Structured closure linking concepts to real life</option>
+            </select>
+          </div>
+          <textarea id="positivePoints" class="notes-textarea" placeholder="Key technical strengths observed..."></textarea>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div class="notes-header-row">
+            <div class="notes-header">Areas for Improvement / نقاط التحسين في الأداء الفني:</div>
+            <select class="quick-select no-print" onchange="insertOption('improvementPoints', this)">
+              <option value="">-- Quick Select (Recommendations) --</option>
+              <option value="Strengthen connections between academic concepts, real-life applications, and the local environment.">🌍 Connect concepts to real life & local environment</option>
+              <option value="Maximize English immersion and target language use while minimizing Arabic in class.">🗣️ Maximize English use & minimize Arabic (L1)</option>
+              <option value="Strengthen classroom control through structured movement routines and positive intervention for restless students.">⚠️ Strengthen routines for restless/active students</option>
+              <option value="Design tailored instructional adaptations and differentiated tasks for inclusion (SEN) students.">♿ Adapt tasks & individual plans for SEN/inclusion students</option>
+              <option value="Incorporate more collaborative learning and group work strategies.">1. Incorporate more collaborative group work</option>
+              <option value="Enhance wait-time after questions to encourage critical thinking.">2. Enhance wait-time after questions</option>
+              <option value="Deepen the integration of interactive digital and AI-driven platforms.">3. Deepen interactive EdTech & AI platforms</option>
+              <option value="Increase differentiation to challenge advanced students and support low achievers.">4. Enhance differentiation for varied abilities</option>
+              <option value="Maintain consistent periodic marking and dated follow-up in student notebooks.">5. Consistent dated notebook marking & follow-up</option>
+              <option value="Allow more dedicated time for student reflection and self-assessment.">6. Dedicate time for self-assessment & reflection</option>
+              <option value="Ensure stricter pacing to allocate adequate time for formal lesson closure.">7. Improve pacing for structured lesson closure</option>
+              <option value="Diversify formative assessment tools (e.g., exit tickets, quick polls).">8. Diversify formative tools (exit tickets, polls)</option>
+              <option value="Balance teacher talk time by increasing active student participation.">9. Reduce teacher talk time / boost student talk</option>
+            </select>
+          </div>
+          <textarea id="improvementPoints" class="notes-textarea" placeholder="Constructive recommendations for development..."></textarea>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div class="notes-header-row">
+            <div class="notes-header">Teacher Notable Expertise / يستفاد من المعلم في:</div>
+            <select class="quick-select no-print" onchange="insertOption('teacherStrength', this)">
+              <option value="">-- Quick Select (Expertise) --</option>
+              <option value="Contextualized Learning & Real-World Environmental Applications.">🌍 Real-World & Environmental Contextualized Learning</option>
+              <option value="Full English Language Immersion & Communicative Competence.">🗣️ Full English Immersion & Communicative Pedagogy</option>
+              <option value="Dynamic Classroom Control & Managing High-Energy / Kinesthetic Learners.">⭐ Managing High-Energy / Kinesthetic Learners</option>
+              <option value="Inclusive Education Pedagogies & Individualized Support for SEN Learners.">♿ Inclusive Education & Accommodating SEN Learners</option>
+              <option value="Interactive Classroom Management & Positive Discipline.">1. Interactive Classroom Management & Discipline</option>
+              <option value="Integrating AI & EdTech Tools in Modern Pedagogy.">2. Integrating AI & EdTech in Modern Pedagogy</option>
+              <option value="Differentiated Instruction & Multi-Level Activity Design.">3. Differentiated Instruction & Activity Design</option>
+              <option value="Formative Assessment Strategies & Instant Learning Feedback.">4. Formative Assessment & Instant Feedback</option>
+              <option value="Mentoring Novice Teachers & Peer Instructional Coaching.">5. Mentoring Novice Teachers & Peer Coaching</option>
+              <option value="Developing Higher-Order Thinking Skills & Problem-Solving.">6. HOTS Development & Problem-Solving</option>
+              <option value="STEM / Interdisciplinary Project-Based Learning Design.">7. STEM & Project-Based Learning Design</option>
+              <option value="Student Motivation, Engagement & Classroom Dynamics.">8. Student Motivation & Dynamic Engagement</option>
+              <option value="Curriculum Planning, Pacing & Instructional Enrichment.">9. Curriculum Pacing & Instructional Enrichment</option>
+              <option value="Remedial Planning & Academic Intervention for Struggling Learners.">10. Remedial Planning & Academic Intervention</option>
+            </select>
+          </div>
+          <textarea id="teacherStrength" class="notes-textarea" placeholder="Areas where the teacher can share best practices with colleagues..."></textarea>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Signatures Table (4 Columns) -->
+    <table class="signature-table">
+      <thead>
+        <tr>
+          <th class="sig-th" style="width: 25%;">Observer / اسم المتابع</th>
+          <th class="sig-th" style="width: 25%;">Role / الوظيفة</th>
+          <th class="sig-th" style="width: 20%;">Signature / التوقيع</th>
+          <th class="sig-th" style="width: 30%;">Teacher / اسم المعلم وتوقيعه</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <input type="text" id="supervisorNameInput" value="Mohammed Othman" style="border:none; text-align:center; outline:none; font-weight:700; font-size:10.5px; width:95%;" />
+          </td>
+          <td>
+            <input type="text" id="supervisorRoleInput" value="Educational Supervisor" style="border:none; text-align:center; outline:none; font-weight:700; font-size:10.5px; width:95%; color:var(--primary-green);" />
+          </td>
+          <td>
+            <span style="color:#64748b; font-weight:600;">Signed</span>
+          </td>
+          <td>
+            <div style="font-weight:700; font-size:10.5px; color:var(--text-dark);" id="signTeacherName">Ibrahim Ragab Ahmed</div>
+            <div style="font-size:9.5px; color:#64748b;">Signature: ______________</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Vision Footer -->
+    <div class="vision-footer">
+      <div class="vision-box">
+        رؤيتنا : بناء الشخصية المتكاملة للطالب | Our Vision: Building an Integrated Personality for the Student
+      </div>
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="action-bar no-print">
+      <div style="display: flex; gap: 5px;">
+        <button class="btn btn-logout" onclick="handleLogout()">Sign Out</button>
+        <button class="btn btn-pin" onclick="openChangePinModal()">Change PIN</button>
+      </div>
+      <div style="display: flex; gap: 5px;">
+        <button class="btn btn-reset" onclick="confirmResetForm()" title="Clear all inputs">Clear / Reset Form</button>
+        <button id="saveBtn" class="btn btn-save" onclick="saveEvaluationToFirebase()">Save to Cloud</button>
+        <button class="btn btn-print" onclick="window.print()">Print (Single Page)</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Quick Insert Function for Dropdowns
+    function insertOption(textareaId, selectElement) {
+      const val = selectElement.value;
+      if (!val) return;
+      const ta = document.getElementById(textareaId);
+      if (ta.value.trim() === "") {
+        ta.value = "• " + val;
+      } else {
+        ta.value += "\n• " + val;
+      }
+      selectElement.selectedIndex = 0;
+    }
+
+    // 1. LocalStorage Custom Logo Handling
+    const savedLogo = localStorage.getItem('bayariq_school_logo');
+    if (savedLogo) {
+      document.getElementById('schoolLogo').src = savedLogo;
+    }
+
+    function uploadCustomLogo(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const dataUrl = evt.target.result;
+        document.getElementById('schoolLogo').src = dataUrl;
+        try {
+          localStorage.setItem('bayariq_school_logo', dataUrl);
+        } catch (err) {
+          console.warn('Image size too large for cache');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 2. Firebase Initialization[cite: 2]
+    const firebaseConfig = {
+      apiKey: "AIzaSyCx9by6AVV2H877XzKB7zx_3DEUkcxr0e8",
+      authDomain: "bayariq-budget.firebaseapp.com",
+      databaseURL: "https://bayariq-budget-default-rtdb.firebaseio.com",
+      projectId: "bayariq-budget",
+      storageBucket: "bayariq-budget.firebasestorage.app",
+      messagingSenderId: "1028261992508",
+      appId: "1:1028261992508:web:2e30dbfb3f2083c1694b39"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let PIN_CODES = {
+      primary: "1111",
+      middle: "2222",
+      secondary: "3333",
+      special: "4444",
+      supervisor: "9999"
+    };
+
+    const STAGE_NAMES = {
+      primary: "Elementary School",
+      middle: "Middle School",
+      secondary: "High School",
+      special: "Special Education"
+    };
+
+    db.ref("settings/pins").on("value", (snapshot) => {
+      const livePins = snapshot.val();
+      if (livePins) PIN_CODES = { ...PIN_CODES, ...livePins };
+    });
+
+    // 28 Indicators: Planning(10) + Launch(10) + Media(15) + English(15) + Teaching(50) = Exactly 100 Points Total
+    const maxScores = [
+      3, 3, 4,          // Planning (10)
+      3, 3, 4,          // Lesson Launch (10)
+      4, 4, 4, 3,       // Media & Tech (15)
+      4, 4, 3, 4,       // English Proficiency (15)
+      4, 3, 4, 3, 4, 4, 3, 4, 4, 2, 3, 4, 4, 4 // Teaching & Learning (50)
+    ];
+
+    let currentRole = null;
+    let viewingStage = null;
+
+    function handleLogin() {
+      const role = document.getElementById("userRole").value;
+      const pin = document.getElementById("userPin").value.trim();
+      const err = document.getElementById("loginError");
+
+      if (pin === PIN_CODES[role]) {
+        err.style.display = "none";
+        currentRole = role;
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("mainApp").style.display = "block";
+
+        if (role === "supervisor") {
+          document.getElementById("supervisorNav").style.display = "flex";
+          document.getElementById("saveBtn").innerText = "Save & Approve as Supervisor";
+          switchStageForSupervisor("primary");
+        } else {
+          document.getElementById("supervisorNav").style.display = "none";
+          document.getElementById("saveBtn").innerText = "Save to Cloud";
+          viewingStage = role;
+          loadEvaluationFromFirebase(role);
+        }
+      } else {
+        err.style.display = "block";
+      }
+    }
+
+    function handleLogout() {
+      currentRole = null;
+      viewingStage = null;
+      document.getElementById("userPin").value = "";
+      document.getElementById("loginScreen").style.display = "flex";
+      document.getElementById("mainApp").style.display = "none";
+    }
+
+    function switchStageForSupervisor(stage) {
+      viewingStage = stage;
+      document.querySelectorAll(".stage-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.innerText.toLowerCase().includes(stage.toLowerCase()));
+      });
+      loadEvaluationFromFirebase(stage);
+    }
+
+    function validateAndRecalc(index, maxVal) {
+      const input = document.getElementById(`sc_${index}`);
+      let val = parseFloat(input.value);
+      if (val > maxVal) input.value = maxVal;
+      else if (val < 0) input.value = 0;
+      calculateGrandTotal();
+    }
+
+    function calculateGrandTotal() {
+      let total = 0;
+      for (let i = 0; i < maxScores.length; i++) {
+        total += parseFloat(document.getElementById(`sc_${i}`).value) || 0;
+      }
+      document.getElementById("totalScoreDisplay").innerText = total;
+
+      const badge = document.getElementById("evaluationStatusBadge");
+      badge.innerText = `Total: ${total} / 100`;
+      if (total >= 90) {
+        badge.className = "badge-grade badge-excellent";
+        badge.innerText += " (Excellent)";
+      } else if (total >= 80) {
+        badge.className = "badge-grade badge-vgood";
+        badge.innerText += " (Very Good)";
+      } else if (total >= 70) {
+        badge.className = "badge-grade badge-good";
+        badge.innerText += " (Good)";
+      } else {
+        badge.className = "badge-grade badge-need-imp";
+        badge.innerText += " (Needs Improvement)";
+      }
+    }
+
+    function updateSignTeacherName() {
+      const name = document.getElementById("teacherName").value;
+      document.getElementById("signTeacherName").innerText = name.trim() || "-";
+    }
+
+    // Clear / Reset Form
+    function confirmResetForm() {
+      if (confirm("Are you sure you want to clear and reset the entire evaluation document?")) {
+        clearForm();
+        document.getElementById("supervisorNameInput").value = "Mohammed Othman";
+        document.getElementById("supervisorRoleInput").value = "Educational Supervisor";
+        alert("Form cleared successfully!");
+      }
+    }
+
+    function clearForm() {
+      document.querySelectorAll('.meta-input, .notes-textarea').forEach(el => el.value = "");
+      document.getElementById("quizAverage").value = "";
+      document.getElementById("signTeacherName").innerText = "-";
+      for (let i = 0; i < maxScores.length; i++) {
+        const el = document.getElementById(`sc_${i}`);
+        if (el) el.value = "";
+      }
+      calculateGrandTotal();
+    }
+
+    function saveEvaluationToFirebase() {
+      if (!viewingStage) return;
+
+      const scores = [];
+      for (let i = 0; i < maxScores.length; i++) {
+        scores.push(document.getElementById(`sc_${i}`).value || 0);
+      }
+
+      const selectedVisit = document.querySelector('input[name="visitType"]:checked')?.value || "Evaluative";
+      const selectedQuiz = document.querySelector('input[name="quizType"]:checked')?.value || "Written";
+
+      const payload = {
+        meta: {
+          visitType: selectedVisit,
+          teacherName: document.getElementById("teacherName").value,
+          schoolDept: document.getElementById("schoolDept").value,
+          subjectName: document.getElementById("subjectName").value,
+          lessonTopic: document.getElementById("lessonTopic").value,
+          evalDate: document.getElementById("evalDate").value,
+          classPeriod: document.getElementById("classPeriod").value,
+          classGrade: document.getElementById("classGrade").value,
+          presentCount: document.getElementById("presentCount").value,
+          supervisorName: document.getElementById("supervisorNameInput").value,
+          supervisorRole: document.getElementById("supervisorRoleInput").value
+        },
+        scores: scores,
+        totalScore: document.getElementById("totalScoreDisplay").innerText,
+        quiz: {
+          type: selectedQuiz,
+          average: document.getElementById("quizAverage").value
+        },
+        notes: {
+          positivePoints: document.getElementById("positivePoints").value,
+          improvementPoints: document.getElementById("improvementPoints").value,
+          teacherStrength: document.getElementById("teacherStrength").value
+        },
+        updatedAt: new Date().toISOString()
+      };
+
+      db.ref("teacher_evaluations/" + viewingStage).set(payload, (err) => {
+        if (err) {
+          alert("Cloud saving error: " + err.message);
+        } else {
+          alert(`Evaluation for (${STAGE_NAMES[viewingStage]}) saved successfully!`);
+        }
+      });
+    }
+
+    function loadEvaluationFromFirebase(stageKey) {
+      clearForm();
+      db.ref("teacher_evaluations/" + stageKey).once("value").then((snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          if (data.meta) {
+            document.getElementById("teacherName").value = data.meta.teacherName || "";
+            document.getElementById("schoolDept").value = data.meta.schoolDept || "";
+            document.getElementById("subjectName").value = data.meta.subjectName || "";
+            document.getElementById("lessonTopic").value = data.meta.lessonTopic || "";
+            document.getElementById("evalDate").value = data.meta.evalDate || "";
+            document.getElementById("classPeriod").value = data.meta.classPeriod || "";
+            document.getElementById("classGrade").value = data.meta.classGrade || "";
+            document.getElementById("presentCount").value = data.meta.presentCount || "";
+            document.getElementById("supervisorNameInput").value = data.meta.supervisorName || "Mohammed Othman";
+            document.getElementById("supervisorRoleInput").value = data.meta.supervisorRole || "Educational Supervisor";
+            
+            if (data.meta.visitType) {
+              const vRadios = document.querySelectorAll('input[name="visitType"]');
+              vRadios.forEach(r => { if (r.value === data.meta.visitType) r.checked = true; });
+            }
+            updateSignTeacherName();
+          }
+
+          if (data.scores) {
+            data.scores.forEach((val, i) => {
+              if (document.getElementById(`sc_${i}`)) document.getElementById(`sc_${i}`).value = val;
+            });
+          }
+
+          if (data.quiz) {
+            document.getElementById("quizAverage").value = data.quiz.average || "";
+            const radios = document.querySelectorAll('input[name="quizType"]');
+            radios.forEach(r => { if (r.value === data.quiz.type) r.checked = true; });
+          }
+
+          if (data.notes) {
+            document.getElementById("positivePoints").value = data.notes.positivePoints || "";
+            document.getElementById("improvementPoints").value = data.notes.improvementPoints || "";
+            document.getElementById("teacherStrength").value = data.notes.teacherStrength || "";
+          }
+
+          calculateGrandTotal();
+        }
+      });
+    }
+
+    function openChangePinModal() {
+      document.getElementById("currentPinInput").value = "";
+      document.getElementById("newPinInput").value = "";
+      document.getElementById("confirmNewPinInput").value = "";
+      document.getElementById("pinChangeMsg").style.display = "none";
+      document.getElementById("changePinModal").style.display = "flex";
+    }
+
+    function closeChangePinModal() {
+      document.getElementById("changePinModal").style.display = "none";
+    }
+
+    function submitChangePin() {
+      const cur = document.getElementById("currentPinInput").value.trim();
+      const n1 = document.getElementById("newPinInput").value.trim();
+      const n2 = document.getElementById("confirmNewPinInput").value.trim();
+      const msg = document.getElementById("pinChangeMsg");
+      msg.style.display = "block";
+
+      if (cur !== PIN_CODES[currentRole]) {
+        msg.style.color = "#dc2626";
+        msg.innerText = "Current PIN is incorrect!";
+        return;
+      }
+      if (!n1 || n1.length < 4) {
+        msg.style.color = "#dc2626";
+        msg.innerText = "PIN must be at least 4 digits.";
+        return;
+      }
+      if (n1 !== n2) {
+        msg.style.color = "#dc2626";
+        msg.innerText = "New PIN and confirmation do not match!";
+        return;
+      }
+
+      db.ref("settings/pins/" + currentRole).set(n1, (err) => {
+        if (err) {
+          msg.style.color = "#dc2626";
+          msg.innerText = "Cloud error: " + err.message;
+        } else {
+          PIN_CODES[currentRole] = n1;
+          msg.style.color = "#15803d";
+          msg.innerText = "PIN changed successfully!";
+          setTimeout(closeChangePinModal, 1200);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
